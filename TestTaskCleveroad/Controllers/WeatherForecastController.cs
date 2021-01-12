@@ -29,35 +29,66 @@ namespace TestTaskCleveroad.Controllers
         }
 
         [HttpGet, Route("Current")]
-        public async Task<WeatherForecast> GetCurrent(string cityName)
+        public async Task<RootObject> GetCurrent(string cityName)
         {
          
             string apiKey = "6418ce6c8e4fd8f4c2c5c0bfd7f52a17";
+
             HttpClient client = new HttpClient();
-            HttpResponseMessage response = await client.GetAsync($"http://api.openweathermap.org/data/2.5/weather?q={cityName}&units=metric&appid={apiKey}");
-            HttpContent content = response.Content;
+            HttpResponseMessage response = new HttpResponseMessage();
 
-            string data = await content.ReadAsStringAsync();        
-            
-            WeatherForecast weather = JsonConvert.DeserializeObject<WeatherForecast>(data);
 
-            return weather;
+            RootObject weather = new RootObject();
+           
+            try
+            {
+                response = await client.GetAsync($"http://api.openweathermap.org/data/2.5/weather?q={cityName}&units=metric&appid={apiKey}");
+
+                if (response.StatusCode == (HttpStatusCode)404) throw new ExceptionModel();
+                HttpContent content = response.Content;
+
+                string data = await content.ReadAsStringAsync();
+
+                weather = JsonConvert.DeserializeObject<RootObject>(data);
+                return weather;
+            }
+            catch (ExceptionModel exception)
+            {
+                Response.StatusCode = exception.Status;
+                ExceptionMessage exceptionMessage = new ExceptionMessage();
+                exceptionMessage.Code = exception.Status;
+                exceptionMessage.Message = "City not found";
+
+                return exceptionMessage;
+             
+            }              
         }
 
         [HttpGet, Route("Forecast")]
-        public async Task<WeatherForecast> GetForecast(string cityName)
+        public async Task<RootObjectForecast> GetForecast(string cityName)
         {
 
             string apiKey = "6418ce6c8e4fd8f4c2c5c0bfd7f52a17";
             HttpClient client = new HttpClient();
-            HttpResponseMessage response = await client.GetAsync($"http://api.openweathermap.org/data/2.5/forecast?q={cityName}&units=metric&appid={apiKey}");
-            HttpContent content = response.Content;
+            HttpResponseMessage response;
+            try
+            {
+                response = await client.GetAsync($"http://api.openweathermap.org/data/2.5/forecast?q={cityName}&units=metric&appid={apiKey}");
+                if (response.StatusCode == (HttpStatusCode)404) throw new ExceptionModel();
 
-            string data = await content.ReadAsStringAsync();
+                HttpContent content = response.Content;
 
-            WeatherForecast weather = JsonConvert.DeserializeObject<WeatherForecast>(data);
+                string data = await content.ReadAsStringAsync();
 
-            return weather;
+                RootObjectForecast weather = JsonConvert.DeserializeObject<RootObjectForecast>(data);
+
+                return weather;
+            }
+            catch(ExceptionModel exception)
+            {
+                Response.StatusCode = 404;
+                return null;
+            }
         }
     }
 }
